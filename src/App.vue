@@ -1,28 +1,65 @@
 <template>
   <div id="app">
-    <img alt="Vue logo" src="./assets/logo.png">
-    <HelloWorld msg="Welcome to Your Vue.js App"/>
+    <router-view />
   </div>
 </template>
 
-<script>
-import HelloWorld from './components/HelloWorld.vue'
-
-export default {
-  name: 'App',
-  components: {
-    HelloWorld
-  }
-}
-</script>
-
 <style>
-#app {
-  font-family: Avenir, Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-align: center;
-  color: #2c3e50;
-  margin-top: 60px;
+body {
+  margin: 0;
+}
+.all {
+  width: 100%;
+}
+.main-parent {
+  width: 80%;
+  margin-left: 100px;
+}
+.contents-parent {
+  width: 100%;
+  min-width: 500px;
+}
+.header-parent {
+  width: 100%;
+  padding-top: 5px;
+  padding-bottom: 5px;
+  border: 1px solid;
+  display: flex;
+  justify-content: space-between;
+  background-color: #defcde;
+}
+.header-title {
+  margin-left: 10px;
+  color: #fff;
+  text-shadow: 0px 3px 10px #808080;
+  font-weight: bold;
+  font-size: 25px;
+  font-family: 'arial black';
+  margin-right: 5px;
+}
+.post-parent {
+  width: 100%;
+  min-width: 500px;
+  border-left: solid 1px;
+  border-right: solid 1px;
+  border-bottom: solid 1px;
+  padding-top: 5px;
+}
+.post-interest-tag {
+  background-color: #dedede;
+  color: #707070;
+  border: 1px solid;
+  margin: 5px;
+  line-height: 20px;
+  padding-right: 5px;
+  padding-left: 5px;
+  overflow-wrap: normal;
+  display: inline-block;
+  cursor: pointer;
+}
+.interest-active {
+  background: #defcde;
+  color: #707070;
+  cursor: pointer;
 }
 </style>

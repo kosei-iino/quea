@@ -1,7 +1,7 @@
 <template>
   <loginWapper>
     <template v-slot:header-title>{{ pageName }}</template>
-    <template v-slot:content-title>{{ title }}</template>
+    <template v-slot:content-title>{{ titleName }}</template>
   </loginWapper>
 </template>
 
@@ -12,7 +12,7 @@ export default {
   data() {
     return {
       pageName: 'tmp_signup',
-      title: '新規登録',
+      titleName: '新規登録',
     };
   },
   created() {

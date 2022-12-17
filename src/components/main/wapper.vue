@@ -182,7 +182,7 @@
               <img
                 class="post-evaluation-icon"
                 src="@/assets/icon/Like.png"
-                @click="like(post.uid, post.post_id, post.reply_id)"
+                @click="addLike(post.uid, post.post_id, post.reply_id)"
               />
               <label>{{ post.likes }}</label>
             </div>
@@ -190,7 +190,7 @@
               <img
                 class="post-evaluation-icon"
                 src="@/assets/icon/Comment.png"
-                @click="comment(post, post.post_id)"
+                @click="displayComment(post.post_id)"
               />
               <label>{{ post.comments }}</label>
             </div>
@@ -340,6 +340,8 @@ export default {
       changeDisplayData: '',
       searchWord: '',
       searchType: 'post',
+      replyUid: '',
+      replyId: '',
       bolDialog: false,
       bolFader: false,
       bolPostButton: false,
@@ -364,9 +366,9 @@ export default {
       return this.$store.getters.getPost;
     },
     userList() {
-      const users = this.$store.getters.getProfile;
-      this.getEdited(users[0]);
-      return users;
+      const getProfile = this.$store.getters.getProfile;
+      this.gettProfileEdited(getProfile[0]);
+      return getProfile;
     },
     colorList() {
       return this.$store.getters.getColorList;
@@ -378,10 +380,18 @@ export default {
     },
   },
   methods: {
+    async gettProfileEdited(getProfile) {
+      if (getProfile) {
+        this.previewIconBk = getProfile.user_icon;
+        this.previewIcon = this.previewIconBk;
+        this.selfIntroduction = getProfile.self_introduction;
+        this.userInterestTags = getProfile.interest_tags;
+      }
+    },
     showDialog(DialogType) {
       switch (DialogType) {
         case 'postStart':
-          if (this.postUid) {
+          if (this.replyUid) {
             this.dialogTitle = 'REPLY';
           } else {
             this.dialogTitle = 'POST';
@@ -417,9 +427,9 @@ export default {
       this.bolPostButton = false;
       this.bolSaveButton = false;
       this.bolPostFileButton = false;
-      this.postUid = '';
-      this.postId = '';
-      this.interestTag = '';
+      this.replyUid = '';
+      this.replyId = '';
+      this.InterestTag = '';
       this.postMessage = '';
       this.previewIcon = this.previewIconBk;
     },
@@ -478,16 +488,16 @@ export default {
       }
     },
     async getPosts() {
-      const uid = this.$route.query.uid;
+      const queryUid = this.$route.query.uid;
       switch (this.changeDisplayData.displayType) {
         case 'post':
           this.$store.dispatch('getPosts', {
-            uid,
+            queryUid,
             displayName: this.changeDisplayData.displayName,
           });
           break;
         case 'profile':
-          this.$store.dispatch('getProfile', { uid });
+          this.$store.dispatch('getProfile', { queryUid });
           break;
       }
     },
@@ -495,31 +505,22 @@ export default {
       this.$store.dispatch('chengeDisplay', displayName);
       this.getPosts();
     },
-    postStart(postUid, postId, interestTag) {
-      this.postUid = postUid;
-      this.postId = postId;
-      this.interestTag = interestTag;
+    postStart(replyUid, replyId, replyInterestTag) {
+      this.replyUid = replyUid;
+      this.replyId = replyId;
+      this.interestTag = replyInterestTag;
       this.showDialog('postStart');
     },
     async sendPost() {
-      const user = this.$store.getters.getUser;
-      if (this.postUid) {
-        await this.$store.dispatch('sendReply', {
-          uid: user.uid,
-          postMessage: this.postMessage,
-          interestTag: this.interestTag,
-          postUid: this.postUid,
-          postId: this.postId,
-          reader: this.files,
-        });
-      } else {
-        await this.$store.dispatch('sendPost', {
-          uid: user.uid,
-          postMessage: this.postMessage,
-          interestTag: this.interestTag,
-          reader: this.files,
-        });
-      }
+      const getUser = this.$store.getters.getUser;
+      await this.$store.dispatch('sendPost', {
+        postUid: getUser.searchUid,
+        postMessage: this.postMessage,
+        interestTag: this.interestTag,
+        replyUid: this.replyUid,
+        replyId: this.replyId,
+        fileReader: this.getFiles,
+      });
       this.closeDialog();
       this.getPosts();
     },
@@ -527,31 +528,21 @@ export default {
       this.previewImage = postImage;
       this.showDialog('showImage');
     },
-    async like(postUid, postId, repryId) {
-      const user = this.$store.getters.getUser;
-      await this.$store.dispatch('like', {
-        uid: user.uid,
+    async addLike(postUid, postId, repryId) {
+      const getUser = this.$store.getters.getUser;
+      await this.$store.dispatch('addLike', {
+        searchUid: getUser.searchUid,
         postUid,
         postId,
         repryId,
       });
       this.getPosts();
     },
-    async comment(post, postId) {
+    async displayComment(postId) {
       this.$store.dispatch('getPosts', {
-        displayName: 'commentMy',
-        post,
+        displayName: 'comment',
         postId: postId,
       });
-    },
-    async getEdited(users) {
-      if (users) {
-        this.previewIconBk = users.user_icon;
-        this.previewIcon = this.previewIconBk;
-        this.selfIntroduction = users.self_introduction;
-        console.log();
-        this.userInterestTags = users.interest_tags;
-      }
     },
     async updateProfile(uid) {
       await this.$store.dispatch('updateProfile', {
@@ -580,18 +571,18 @@ export default {
         this.showDialog('showImage');
       }
     },
-    previewImage(e) {
-      const files = e.target.files || e.dataTransfer.files;
-      this.files = files[0];
-      const reader = new FileReader();
-      reader.onload = (e) => {
+    previewImage(imageData) {
+      const getFiles = imageData.target.files || imageData.dataTransfer.files;
+      this.getFiles = getFiles[0];
+      const fileReader = new FileReader();
+      fileReader.onload = (e) => {
         this.previewIcon = e.target.result;
       };
-      reader.readAsDataURL(this.files);
+      fileReader.readAsDataURL(this.getFiles);
     },
     async updateImage() {
       await this.$store.dispatch('updateImage', {
-        reader: this.files,
+        fileReader: this.getFiles,
       });
       this.getPosts();
       this.closeDialog();
@@ -603,8 +594,9 @@ export default {
       });
     },
     async changeFlame(flameColor) {
-      const user = this.$store.getters.getUser;
-      await this.$store.dispatch('changeFlame', { uid: user.uid, flameColor });
+      await this.$store.dispatch('changeFlame', {
+        flameColor,
+      });
       await this.$store.dispatch('getSetting');
     },
     async logout() {
@@ -769,6 +761,7 @@ export default {
 .post-img {
   border: solid 1px;
   border-radius: 10%;
+  margin-left: 10px;
   width: 60%;
   height: 60%;
 }

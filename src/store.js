@@ -61,23 +61,23 @@ export default new Vuex.Store({
     },
     actions: {
         async snsSignup(context, data) {
-            let signupData = { uid: '', pageName: '', errorMessage: '' };
+            let signupData = { inputUid: '', pageName: '', errorMessage: '' };
             let userData = '';
             try {
-                let provider = '';
+                let useProvider = '';
                 switch (data.snsType) {
                     case 'google':
-                        provider = new firebase.auth.GoogleAuthProvider();
+                        useProvider = new firebase.auth.GoogleAuthProvider();
                         break;
                     case 'facebook':
-                        provider = new firebase.auth.FacebookAuthProvider();
+                        useProvider = new firebase.auth.FacebookAuthProvider();
                         break;
                     case 'github':
-                        provider = new firebase.auth.GithubAuthProvider();
+                        useProvider = new firebase.auth.GithubAuthProvider();
                         break;
                 }
-                userData = await firebase.auth().signInWithPopup(provider);
-                signupData.uid = userData.user.uid
+                userData = await firebase.auth().signInWithPopup(useProvider);
+                signupData.inputUid = userData.user.uid
                 if (!userData.additionalUserInfo.isNewUser) {
                     const userRef = await firebase.firestore().collection('information').doc('users').collection('user').doc(signupData.uid).get();
                     if (!userRef.data().tmp_regist) {
@@ -86,14 +86,14 @@ export default new Vuex.Store({
                         signupData.pageName = 'signup'
                     }
                 } else {
-                    const uid = signupData.uid;
-                    const mail = userData.user.email;
+                    const inputUid = signupData.inputUid;
+                    const inputMail = userData.user.email;
                     const displayName = userData.user.displayName;
                     await userData.user.updateProfile({ displayName });
-                    const userRef = await firebase.firestore().collection('information').doc('users').collection('user').doc(uid);
+                    const userRef = await firebase.firestore().collection('information').doc('users').collection('user').doc(inputUid);
                     await userRef.set({
-                        uid: uid,
-                        mail: mail,
+                        uid: inputUid,
+                        mail: inputMail,
                         user_name: displayName,
                         registar_date: firebase.firestore.FieldValue.serverTimestamp(),
                         tmp_regist: true
@@ -106,13 +106,13 @@ export default new Vuex.Store({
                 } else {
                     if (e.code === 'auth/account-exists-with-different-credential') {
                         try {
-                            const providers = await firebase.auth().fetchSignInMethodsForEmail(e.email)
+                            const useProviders = await firebase.auth().fetchSignInMethodsForEmail(e.email)
                             const supportedPopupSignInMethods = [
                                 firebase.auth.GoogleAuthProvider.PROVIDER_ID,
                                 firebase.auth.FacebookAuthProvider.PROVIDER_ID,
                                 firebase.auth.GithubAuthProvider.PROVIDER_ID,
                             ];
-                            const firstPopupProviderMethod = providers.find(p => supportedPopupSignInMethods.includes(p));
+                            const firstPopupProviderMethod = useProviders.find(p => supportedPopupSignInMethods.includes(p));
                             let linkedProvider = '';
                             switch (firstPopupProviderMethod) {
                                 case firebase.auth.GoogleAuthProvider.PROVIDER_ID:
@@ -144,33 +144,33 @@ export default new Vuex.Store({
             return signupData;
         },
         async tmp_signup(context, data) {
-            let signupData = { uid: '', mail: '', errorMessage: '' };
+            let signupData = { inputUid: '', sendMail: '', errorMessage: '' };
             try {
-                const userData = await firebase.auth().createUserWithEmailAndPassword(data.mail, data.password);
-                const mail = data.mail;
-                const uid = userData.user.uid;
-                const userRef = await firebase.firestore().collection('information').doc('users').collection('user').doc(uid);
+                const userData = await firebase.auth().createUserWithEmailAndPassword(data.inputMail, data.inputPassword);
+                const inputMail = data.inputMail;
+                const inputUid = userData.user.uid;
+                const userRef = await firebase.firestore().collection('information').doc('users').collection('user').doc(inputUid);
                 await userRef.set({
-                    uid: uid,
-                    mail: mail,
+                    uid: inputUid,
+                    mail: inputMail,
                     registar_date: firebase.firestore.FieldValue.serverTimestamp(),
                     tmp_regist: true
                 })
-                signupData.uid = uid;
-                signupData.mail = mail;
+                signupData.inputUid = inputUid;
+                signupData.sendMail = inputMail;
             } catch (e) {
                 switch (e.code) {
-                    case "auth/invalid-email":
-                        signupData.errorMessage = "Eメールアドレスが間違っています"
+                    case 'auth/invalid-email':
+                        signupData.errorMessage = 'Eメールアドレスが間違っています'
                         break;
-                    case "auth/wrong-password":
-                        signupData.errorMessage = "パスワードが間違っています"
+                    case 'auth/wrong-password':
+                        signupData.errorMessage = 'パスワードが間違っています'
                         break;
-                    case "auth/email-already-in-use":
-                        signupData.errorMessage = "既に登録されたメールアドレスです"
+                    case 'auth/email-already-in-use':
+                        signupData.errorMessage = '既に登録されたメールアドレスです'
                         break;
                     default:
-                        signupData.errorMessage = "Eメールアドレスまたはパスワードが間違っています"
+                        signupData.errorMessage = 'Eメールアドレスまたはパスワードが間違っています'
                         break;
                 }
             }
@@ -179,12 +179,12 @@ export default new Vuex.Store({
         async signup(context, data) {
             let signupData = { errorMessage: '' };
             let interestTagsFlg = 0;
-            if (data.user_name === '') {
+            if (data.inputUserName === '') {
                 signupData.errorMessage = '※ユーザー名を入力して下さい';
-            } else if (data.birthDay === '') {
+            } else if (data.inputBirthDay === '') {
                 signupData.errorMessage = '※生年月日を入力して下さい。';
             } else {
-                data.interestTags.forEach(async (val) => {
+                data.inputInterestTags.forEach(async (val) => {
                     if (val['flg'] === 'on') {
                         interestTagsFlg = interestTagsFlg + 1;
                     }
@@ -193,15 +193,15 @@ export default new Vuex.Store({
                     signupData.errorMessage = '※興味があることは1つ以上選択してください。';
                 } else {
                     try {
-                        const uid = data.uid;
-                        const displayName = data.user_name;
-                        const userRef = await firebase.firestore().collection('information').doc('users').collection('user').doc(uid);
+                        const inputUid = data.inputUid;
+                        const displayName = data.inputUserName;
+                        const userRef = await firebase.firestore().collection('information').doc('users').collection('user').doc(inputUid);
                         await firebase.auth().currentUser.updateProfile({ displayName });
                         await userRef.set({
-                            sex: data.sex,
+                            sex: data.inputSex,
                             user_name: displayName,
-                            birthday: firebase.firestore.Timestamp.fromDate(new Date(data.birthYear + '/' + data.birthMonth + '/' + data.birthDay)),
-                            interest_tags: data.interestTags,
+                            birthday: firebase.firestore.Timestamp.fromDate(new Date(data.inputBirthYear + '/' + data.inputBirthMonth + '/' + data.inputBirthDay)),
+                            interest_tags: data.inputInterestTags,
                             likes: [],
                             self_introduction: '',
                             icon_path: 'uesr-icon/default.jpg',
@@ -216,37 +216,37 @@ export default new Vuex.Store({
             return signupData
         },
         async login(context, data) {
-            let loginData = { uid: '', errorMessage: '', tmp_regist: false, pageName: 'home' };
-            if (!data.mail || !data.password) {
-                loginData.errorMessage = "Eメールアドレスかパスワードが未入力です"
+            let loginData = { inputUid: '', errorMessage: '', tmp_regist: false, pageName: 'home' };
+            if (!data.inputMail || !data.inputPassword) {
+                loginData.errorMessage = 'Eメールアドレスかパスワードが未入力です'
                 return loginData
             }
             try {
-                const userData = await firebase.auth().signInWithEmailAndPassword(data.mail, data.password);
+                const userData = await firebase.auth().signInWithEmailAndPassword(data.inputMail, data.inputPassword);
                 if (!userData.additionalUserInfo.isNewUser) {
                     const userRef = await firebase.firestore().collection('information').doc('users').collection('user').doc(userData.user.uid).get();
                     if (userRef.data().tmp_regist) {
-                        if (data.uid === userData.user.uid) {
+                        if (data.inputUid === userData.user.uid) {
                             loginData.tmp_regist = true;
-                            loginData.uid = userData.user.uid;
+                            loginData.inputUid = userData.user.uid;
                             loginData.pageName = 'signup'
                         } else {
-                            loginData.errorMessage = "不正なアクセスです"
+                            loginData.errorMessage = '不正なアクセスです'
                         }
                     }
                 } else {
-                    loginData.errorMessage = "Eメールアドレスが間違っています"
+                    loginData.errorMessage = 'Eメールアドレスが間違っています'
                 }
             } catch (e) {
                 switch (e.code) {
-                    case "auth/invalid-email":
-                        loginData.errorMessage = "Eメールアドレスが間違っています"
+                    case 'auth/invalid-email':
+                        loginData.errorMessage = 'Eメールアドレスが間違っています'
                         break;
-                    case "auth/wrong-password":
-                        loginData.errorMessage = "パスワードが間違っています"
+                    case 'auth/wrong-password':
+                        loginData.errorMessage = 'パスワードが間違っています'
                         break;
                     default:
-                        loginData.errorMessage = "Eメールアドレスまたはパスワードが間違っています"
+                        loginData.errorMessage = 'Eメールアドレスまたはパスワードが間違っています'
                         break;
                 }
             }
@@ -265,13 +265,13 @@ export default new Vuex.Store({
             let bolSearch = false;
             let bolProfile = false;
             let bolSetting = false;
-            let displayType = "";
-            if (displayName === "setting") {
+            let displayType = '';
+            if (displayName === 'setting') {
                 bolSetting = true;
-            } else if (displayName === "profileMy" | displayName === "profileElse") {
+            } else if (displayName === 'profileMy' | displayName === 'profileElse') {
                 bolProfile = true;
                 displayType = 'profile'
-            } else if (displayName === "searchPost" | displayName === "searchUser") {
+            } else if (displayName === 'searchPost' | displayName === 'searchUser') {
                 bolPost = true;
                 bolSearch = true;
                 displayType = 'post'
@@ -283,11 +283,12 @@ export default new Vuex.Store({
         },
         async changeFlame(context, data) {
             try {
-                const uid = data.uid;
-                const userRef = await firebase.firestore().collection('information').doc('users').collection('user').doc(uid);
-                await userRef.set({
-                    flame_color: data.flameColor,
-                }, { merge: true })
+                firebase.auth().onAuthStateChanged(async (user) => {
+                    const userRef = await firebase.firestore().collection('information').doc('users').collection('user').doc(user.uid);
+                    await userRef.set({
+                        flame_color: data.flameColor,
+                    }, { merge: true })
+                });
             } catch (e) {
                 console.log(e);
             }
@@ -300,7 +301,7 @@ export default new Vuex.Store({
             try {
                 firebase.auth().onAuthStateChanged(async (user) => {
                     if (user) {
-                        let uid = user.uid
+                        let searchUid = user.uid
                         const displayName = user.displayName
                         let postList = [];
                         let postRef = [];
@@ -309,29 +310,28 @@ export default new Vuex.Store({
                         let interestTags = []
                         const nowDate = new Date();
                         const postFireStore = await firebase.firestore()
-                        if (data.uid) {
-                            uid = data.uid;
+                        if (data.queryUid) {
+                            searchUid = data.queryUid;
                         }
-                        const userRef = await firebase.firestore().collection('information').doc('users').collection('user').doc(uid).get()
+                        const userRef = await firebase.firestore().collection('information').doc('users').collection('user').doc(searchUid).get()
                         userRef.data().interest_tags.forEach(async (val) => {
                             if (val['flg'] === 'on') {
                                 interestTags.push(val['interest']);
                             }
                         });
-                        console.log(data.displayName)
                         switch (data.displayName) {
-                            case "homeMy":
+                            case 'homeMy':
                                 postRef = await postFireStore.collectionGroup('post').where('interest_tag', 'in', interestTags).orderBy('post_date', 'desc').get()
                                 break
-                            case "homeAll":
+                            case 'homeAll':
                                 postRef = await postFireStore.collectionGroup('post').orderBy('post_date', 'desc').get()
                                 break
-                            case "homePopular":
+                            case 'homePopular':
                                 postRef = await postFireStore.collectionGroup('post').orderBy('likes', 'desc').get()
                                 break
-                            case "like":
-                                postRefPost = await postFireStore.collectionGroup('post').where('uid', '==', uid).where('likes', '>=', 1).orderBy('likes', 'desc').get();
-                                postRefComment = await postFireStore.collectionGroup('comment').where('uid', '==', uid).where('likes', '>=', 1).orderBy('likes', 'desc').get();
+                            case 'like':
+                                postRefPost = await postFireStore.collectionGroup('post').where('uid', '==', searchUid).where('likes', '>=', 1).orderBy('likes', 'desc').get();
+                                postRefComment = await postFireStore.collectionGroup('comment').where('uid', '==', searchUid).where('likes', '>=', 1).orderBy('likes', 'desc').get();
                                 await postRefPost.forEach(async doc => {
                                     postRef.push(doc);
                                 });
@@ -339,19 +339,24 @@ export default new Vuex.Store({
                                     postRef.push(doc);
                                 });
                                 break
-                            case "comment":
-                                if (data.searchWord && data.interestTag) {
-                                    postRefPost = await postFireStore.collectionGroup('post').where('uid', '==', uid).where('interest_tag', '==', data.interestTag).orderBy('contents').startAt(data.searchWord).endAt(data.searchWord + '\uf8ff').get()
-                                    postRefComment = await postFireStore.collectionGroup('comment').where('uid', '==', uid).where('interest_tag', '==', data.interestTag).orderBy('contents').startAt(data.searchWord).endAt(data.searchWord + '\uf8ff').get()
-                                } else if (data.searchWord && !data.interestTag) {
-                                    postRefPost = await postFireStore.collectionGroup('post').where('uid', '==', uid).orderBy('contents').startAt(data.searchWord).endAt(data.searchWord + '\uf8ff').get()
-                                    postRefComment = await postFireStore.collectionGroup('comment').where('uid', '==', uid).orderBy('contents').startAt(data.searchWord).endAt(data.searchWord + '\uf8ff').get()
-                                } else if (!data.searchWord && data.interestTag) {
-                                    postRefPost = await postFireStore.collectionGroup('post').where('uid', '==', uid).where('interest_tag', '==', data.interestTag).orderBy('post_date', 'desc').get()
-                                    postRefComment = await postFireStore.collectionGroup('comment').where('uid', '==', uid).where('interest_tag', '==', data.interestTag).orderBy('post_date', 'desc').get()
+                            case 'comment':
+                                if (!data.postId) {
+                                    if (data.searchWord && data.interestTag) {
+                                        postRefPost = await postFireStore.collectionGroup('post').where('uid', '==', searchUid).where('interest_tag', '==', data.interestTag).orderBy('contents').startAt(data.searchWord).endAt(data.searchWord + '\uf8ff').get()
+                                        postRefComment = await postFireStore.collectionGroup('comment').where('uid', '==', searchUid).where('interest_tag', '==', data.interestTag).orderBy('contents').startAt(data.searchWord).endAt(data.searchWord + '\uf8ff').get()
+                                    } else if (data.searchWord && !data.interestTag) {
+                                        postRefPost = await postFireStore.collectionGroup('post').where('uid', '==', searchUid).orderBy('contents').startAt(data.searchWord).endAt(data.searchWord + '\uf8ff').get()
+                                        postRefComment = await postFireStore.collectionGroup('comment').where('uid', '==', searchUid).orderBy('contents').startAt(data.searchWord).endAt(data.searchWord + '\uf8ff').get()
+                                    } else if (!data.searchWord && data.interestTag) {
+                                        postRefPost = await postFireStore.collectionGroup('post').where('uid', '==', searchUid).where('interest_tag', '==', data.interestTag).orderBy('post_date', 'desc').get()
+                                        postRefComment = await postFireStore.collectionGroup('comment').where('uid', '==', searchUid).where('interest_tag', '==', data.interestTag).orderBy('post_date', 'desc').get()
+                                    } else {
+                                        postRefPost = await postFireStore.collectionGroup('post').where('uid', '==', searchUid).orderBy('post_date', 'desc').get();
+                                        postRefComment = await postFireStore.collectionGroup('comment').where('uid', '==', searchUid).orderBy('post_date', 'desc').get();
+                                    }
                                 } else {
-                                    postRefPost = await postFireStore.collectionGroup('post').where('uid', '==', uid).orderBy('post_date', 'desc').get();
-                                    postRefComment = await postFireStore.collectionGroup('comment').where('uid', '==', uid).orderBy('post_date', 'desc').get();
+                                    postRefPost = await postFireStore.collectionGroup('post').where('post_id', '==', data.postId).orderBy('post_date', 'desc').get();
+                                    postRefComment = await postFireStore.collectionGroup('comment').where('reply_id', '==', data.postId).orderBy('post_date', 'desc').get();
                                 }
                                 await postRefPost.forEach(async doc => {
                                     postRef.push(doc);
@@ -361,7 +366,7 @@ export default new Vuex.Store({
                                     postRef.push(doc);
                                 });
                                 break
-                            case "searchPost":
+                            case 'searchPost':
                                 if (data.searchWord && data.interestTag) {
                                     postRef = await postFireStore.collectionGroup('post').where('interest_tag', '==', data.interestTag).orderBy('contents').startAt(data.searchWord).endAt(data.searchWord + '\uf8ff').get()
                                 } else if (data.searchWord && !data.interestTag) {
@@ -392,11 +397,11 @@ export default new Vuex.Store({
                                 });
                             }
                             post.date_year = postDate.getFullYear();
-                            post.date_month = ("0" + (postDate.getMonth() + 1)).slice(-2);
-                            post.date_date = ("0" + (postDate.getDate())).slice(-2);
-                            post.date_hours = ("0" + (postDate.getHours())).slice(-2);
-                            post.date_minutes = ("0" + (postDate.getMinutes())).slice(-2);
-                            post.date_seconds = ("0" + (postDate.getSeconds())).slice(-2);
+                            post.date_month = ('0' + (postDate.getMonth() + 1)).slice(-2);
+                            post.date_date = ('0' + (postDate.getDate())).slice(-2);
+                            post.date_hours = ('0' + (postDate.getHours())).slice(-2);
+                            post.date_minutes = ('0' + (postDate.getMinutes())).slice(-2);
+                            post.date_seconds = ('0' + (postDate.getSeconds())).slice(-2);
                             const diffTime = nowDate - postDate
                             const diffYear = parseInt(diffTime / 86400000 / 365, 10);
                             const diffMonth = parseInt(diffTime / 86400000 / 30, 10);
@@ -421,7 +426,7 @@ export default new Vuex.Store({
                             await postList.push(post)
                         })
 
-                        const userContent = { uid, displayName }
+                        const userContent = { searchUid, displayName }
                         context.commit('saveUser', userContent)
                         context.commit('savePost', postList)
                     }
@@ -435,10 +440,10 @@ export default new Vuex.Store({
                 firebase.auth().onAuthStateChanged(async user => {
                     if (user) {
                         let profileList = [];
-                        let uid = user.uid;
+                        let searchUid = user.uid;
                         let bolMyAccount = true;
-                        if (data.uid) {
-                            uid = data.uid;
+                        if (data.queryUid) {
+                            searchUid = data.queryUid;
                             bolMyAccount = false;
                         }
                         const displayName = user.displayName;
@@ -448,7 +453,7 @@ export default new Vuex.Store({
                         if (data.searchWord) {
                             userRef = await postFireStore.collectionGroup('user').orderBy('user_name').startAt(data.searchWord).endAt(data.searchWord + '\uf8ff').get()
                         } else {
-                            userRef = await postFireStore.collectionGroup('user').where('uid', '==', uid).get()
+                            userRef = await postFireStore.collectionGroup('user').where('uid', '==', searchUid).get()
                         }
                         await userRef.forEach(async (doc) => {
                             const user = doc.data()
@@ -462,7 +467,7 @@ export default new Vuex.Store({
                             });
                             await profileList.push(user)
                         })
-                        const userContent = { uid, displayName, bolMyAccount };
+                        const userContent = { searchUid, displayName, bolMyAccount };
                         context.commit('saveUser', userContent)
                         context.commit('saveProfile', profileList);
                     }
@@ -503,8 +508,8 @@ export default new Vuex.Store({
                 await firebase.auth().onAuthStateChanged(async user => {
                     const uid = user.uid;
                     const storageRef = await firebase.storage().ref()
-                    const storageFileRef = storageRef.child('uesr-icon/' + uid + ".jpg");
-                    storageFileRef.put(data.reader);
+                    const storageFileRef = storageRef.child('uesr-icon/' + uid + '.jpg');
+                    storageFileRef.put(data.fileReader);
 
                     const userRef = await firebase.firestore().collection('information').doc('users').collection('user').doc(uid);
                     await userRef.set({
@@ -517,94 +522,76 @@ export default new Vuex.Store({
         },
         async sendPost(context, data) {
             try {
-                const uid = data.uid;
-                const postId = uid + String(new Date().getTime());
+                const postUid = data.postUid;
+                const postId = postUid + String(new Date().getTime());
                 let imagePath = ''
-                if (data.reader !== undefined) {
-                    imagePath = 'upload-image/' + uid + '/' + postId + '.jpg'
+                if (data.fileReader !== undefined) {
+                    imagePath = 'upload-image/' + postUid + '/' + postId + '.jpg'
                     const storageRef = await firebase.storage().ref()
                     const storageFileRef = storageRef.child(imagePath);
-                    storageFileRef.put(data.reader);
+                    storageFileRef.put(data.fileReader);
                 }
-                const userRef = await firebase.firestore().collection('information').doc('posts').collection('post').doc(postId);
-                await userRef.set({
-                    uid: uid,
-                    post_id: postId,
-                    comments: 0,
-                    likes: 0,
-                    contents: data.postMessage,
-                    interest_tag: data.interestTag,
-                    post_date: firebase.firestore.FieldValue.serverTimestamp(),
-                    unread_flg: true,
-                    image_path: imagePath,
-                })
+                if (!data.replyUid) {
+                    const postRef = await firebase.firestore().collection('information').doc('posts').collection('post').doc(postId);
+                    await postRef.set({
+                        uid: postUid,
+                        post_id: postId,
+                        comments: 0,
+                        likes: 0,
+                        contents: data.postMessage,
+                        interest_tag: data.interestTag,
+                        post_date: firebase.firestore.FieldValue.serverTimestamp(),
+                        unread_flg: true,
+                        image_path: imagePath,
+                    })
+                } else {
+                    const commentRef = await firebase.firestore().collection('information').doc('posts').collection('comment').doc(postId);
+                    await commentRef.set({
+                        uid: postUid,
+                        post_id: postId,
+                        reply_uid: data.replyUid,
+                        reply_id: data.replyId,
+                        likes: 0,
+                        contents: data.postMessage,
+                        interest_tag: data.interestTag,
+                        post_date: firebase.firestore.FieldValue.serverTimestamp(),
+                        unread_flg: true,
+                        image_path: imagePath,
+                    })
+                    const postRef = await firebase.firestore().collection('information').doc('posts').collection('post').doc(data.replyId);
+                    const postRefGet = await postRef.get();
+                    const postRefData = postRefGet.data();
+                    const commentsCnt = postRefData.comments + 1;
+
+                    await postRef.set({
+                        comments: commentsCnt
+                    }, { merge: true })
+                }
             } catch (e) {
                 console.log(e);
             }
         },
-        async sendReply(context, data) {
+        async addLike(context, data) {
             try {
-                const uid = data.uid;
-                const postId = uid + String(new Date().getTime());
-                let imagePath = ''
-                if (data.reader !== undefined) {
-                    imagePath = 'upload-image/' + uid + '/' + postId + '.jpg'
-                    const storageRef = await firebase.storage().ref()
-                    const storageFileRef = storageRef.child(imagePath);
-                    storageFileRef.put(data.reader);
-                }
-                const commentRef = await firebase.firestore().collection('information').doc('posts').collection('comment').doc(postId);
-                await commentRef.set({
-                    uid: uid,
-                    post_id: postId,
-                    reply_uid: data.postUid,
-                    reply_id: data.postId,
-                    likes: 0,
-                    contents: data.postMessage,
-                    interest_tag: data.interestTag,
-                    post_date: firebase.firestore.FieldValue.serverTimestamp(),
-                    unread_flg: true,
-                    image_path: imagePath,
-                })
-                const postRef = await firebase.firestore().collection('information').doc('posts').collection('post').doc(data.postId);
-                const postRefGet = await postRef.get();
-                const postRefData = postRefGet.data();
-                const commentsCnt = postRefData.comments + 1;
-
-                await postRef.set({
-                    comments: commentsCnt
-                }, { merge: true })
-
-            } catch (e) {
-                console.log(e);
-            }
-        },
-        async like(context, data) {
-            try {
-                const uid = data.uid;
+                const searchUid = data.searchUid;
                 let switchColection = 'post'
                 let likeIndex = -1;
                 let likeCnt = 0;
-
-                const userRef = await firebase.firestore().collection('information').doc('users').collection('user').doc(uid);
+                const userRef = await firebase.firestore().collection('information').doc('users').collection('user').doc(searchUid);
                 const userRefGet = await userRef.get();
                 const userRefData = userRefGet.data();
-
                 userRefData.likes.some((like, index) => {
                     if (like['postsId'] === data.postId) {
                         likeIndex = index;
                         return true;
                     }
                 });
-
                 if (data.repryId) {
                     switchColection = 'comment'
                 }
-
                 const postRef = await firebase.firestore().collection('information').doc('posts').collection(switchColection).doc(data.postId);
                 const postRefGet = await postRef.get();
                 const postRefData = postRefGet.data();
-
                 if (likeIndex !== -1) {
                     userRefData.likes.splice(likeIndex, 1);
                     likeCnt = postRefData.likes - 1;
@@ -618,7 +605,6 @@ export default new Vuex.Store({
                 await postRef.set({
                     likes: likeCnt
                 }, { merge: true })
-
             } catch (e) {
                 console.log(e);
             }
@@ -650,10 +636,10 @@ export default new Vuex.Store({
             }
         },
         async checkUid(context, data) {
-            context.commit('errorSave', "");
+            context.commit('errorSave', '');
             let checkData = { bolError: false }
             try {
-                const postRef = firebase.firestore().collection('information').doc('users').collection('user').doc(data.uid);
+                const postRef = firebase.firestore().collection('information').doc('users').collection('user').doc(data.inputUid);
                 const postDoc = await postRef.get()
                 if (postDoc.exists) {
                     const nowDate = new Date();
@@ -662,15 +648,15 @@ export default new Vuex.Store({
                     if (timeLimit <= nowDate) {
                         await postRef.delete();
                         firebase.auth().currentUser.delete();
-                        context.commit('errorSave', "有効期限切れです。もう一度最初からやり直してください。");
+                        context.commit('errorSave', '有効期限切れです。もう一度最初からやり直してください。');
                         checkData.bolError = true;
                     }
                 } else {
-                    context.commit('errorSave', "存在しないユーザーIDが指定されました。");
+                    context.commit('errorSave', '存在しないユーザーIDが指定されました。');
                     checkData.bolError = true;
                 }
             } catch (e) {
-                context.commit('errorSave', "申し訳ありません。時間をおいてもう一度アクセスし直してください。");
+                context.commit('errorSave', '申し訳ありません。時間をおいてもう一度アクセスし直してください。');
                 checkData.bolError = true;
             }
             return checkData

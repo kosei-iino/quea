@@ -17,7 +17,9 @@
           </button>
         </div>
         <div class="post-parent">
-          <p class="sys-msg" v-for="(msg, key) in messages" :key="key">{{ msg }}</p>
+          <p class="sys-msg" v-for="(msg, key) in displayMessages" :key="key">
+            {{ msg }}
+          </p>
           <h1><slot name="content-title"></slot></h1>
           <div
             v-if="
@@ -31,7 +33,7 @@
                   <label>メールアドレス：</label>
                 </td>
                 <td>
-                  <input type="text" placeholder="E-mail" v-model="mail" />
+                  <input type="text" placeholder="E-mail" v-model="inputMail" />
                 </td>
               </tr>
               <tr>
@@ -39,7 +41,7 @@
                   <label>パスワード：</label>
                 </td>
                 <td>
-                  <input type="password" placeholder="Password" v-model="password" />
+                  <input type="password" placeholder="Password" v-model="inputPassword" />
                 </td>
               </tr>
             </table>
@@ -94,7 +96,7 @@
                   <label>ユーザ名：</label>
                 </td>
                 <td>
-                  <input type="text" value="" name="user_name" v-model="user_name" />
+                  <input type="text" value="" name="user_name" v-model="inputUserName" />
                 </td>
               </tr>
               <tr>
@@ -102,17 +104,25 @@
                   <label>※生年月日：</label>
                 </td>
                 <td>
-                  <select class="age-select" v-model="birthYear" @change="getSelectDays">
+                  <select
+                    class="age-select"
+                    v-model="inputBirthYear"
+                    @change="getSelectDays"
+                  >
                     <option v-for="(num, key) in 50" :key="key">
                       {{ yearNow - num }}
                     </option>
                   </select>
                   <label>年</label>
-                  <select class="age-select" v-model="birthMonth" @change="getSelectDays">
+                  <select
+                    class="age-select"
+                    v-model="inputBirthMonth"
+                    @change="getSelectDays"
+                  >
                     <option v-for="(num, key) in 12" :key="key">{{ num }}</option>
                   </select>
                   <label>月</label>
-                  <select class="age-select" v-model="birthDay">
+                  <select class="age-select" v-model="inputBirthDay">
                     <option v-for="(num, key) in daysNum" :key="key">{{ num }}</option>
                   </select>
                   <label>日</label>
@@ -128,12 +138,24 @@
                     id="private"
                     value="非公開"
                     name="sex"
-                    v-model="sex"
+                    v-model="inputSex"
                   />
                   <label for="private">非公開</label>
-                  <input type="radio" id="man" value="男性" name="sex" v-model="sex" />
+                  <input
+                    type="radio"
+                    id="man"
+                    value="男性"
+                    name="sex"
+                    v-model="inputSex"
+                  />
                   <label for="man">男性</label>
-                  <input type="radio" id="woman" value="女性" name="sex" v-model="sex" />
+                  <input
+                    type="radio"
+                    id="woman"
+                    value="女性"
+                    name="sex"
+                    v-model="inputSex"
+                  />
                   <label for="woman">女性</label>
                 </td>
               </tr>
@@ -143,7 +165,7 @@
                 </td>
               </tr>
             </table>
-            <div class="interest-select" v-if="interestUpdateflg">
+            <div class="interest-select" v-if="interestUpdateFlg">
               <label
                 v-for="(InterestTag, key) in itemList"
                 :key="key"
@@ -172,22 +194,22 @@ export default {
   name: 'loginWapper',
   data() {
     return {
-      mail: '',
-      password: '',
+      inputMail: '',
+      inputPassword: '',
       changeDisplayData: '',
       destinationPageName: '',
       destinationPageCode: '',
-      uid: '',
-      sex: '非公開',
-      user_name: '',
+      inputUid: '',
+      inputSex: '非公開',
+      inputUserName: '',
       yearNow: '',
-      birthYear: '',
-      birthMonth: '',
-      birthDay: '',
+      inputBirthYear: '',
+      inputBirthMonth: '',
+      inputBirthDay: '',
       daysNum: '',
-      interestTags: [],
-      messages: [],
-      interestUpdateflg: true,
+      inputInterestTags: [],
+      displayMessages: [],
+      interestUpdateFlg: true,
     };
   },
   mounted() {
@@ -199,7 +221,7 @@ export default {
   computed: {
     itemList() {
       this.getItemList();
-      return this.interestTags;
+      return this.inputInterestTags;
     },
   },
   methods: {
@@ -222,14 +244,14 @@ export default {
         case 'error':
           this.destinationPageName = '新規登録';
           this.destinationPageCode = 'tmp_signup';
-          this.messages.push(this.$store.getters.getError);
+          this.displayMessages.push(this.$store.getters.getError);
           break;
       }
     },
     async checkQuery() {
       if (this.$route.query.uid) {
         const checkData = await this.$store.dispatch('checkUid', {
-          uid: this.$route.query.uid,
+          inputUid: this.$route.query.uid,
         });
         if (checkData.bolError) {
           this.$router.push('error');
@@ -240,34 +262,34 @@ export default {
       }
     },
     async sendMail() {
-      this.messages.length = 0;
+      this.displayMessages.length = 0;
       const signupData = await this.$store.dispatch('tmp_signup', {
-        mail: this.mail,
-        password: this.password,
+        inputMail: this.inputMail,
+        inputPassword: this.inputPassword,
       });
       if (signupData.errorMessage !== '') {
-        this.messages.push(signupData.errorMessage);
+        this.displayMessages.push(signupData.errorMessage);
       } else {
         const mailData = await awsSes(signupData);
         if (mailData.errorMessage !== '') {
-          this.messages.push(mailData.errorMessage);
+          this.displayMessages.push(mailData.errorMessage);
         } else {
-          this.messages.push('メールを送信しました');
+          this.displayMessages.push('メールを送信しました');
         }
       }
     },
     async login() {
-      this.messages.length = 0;
+      this.displayMessages.length = 0;
       const loginData = await this.$store.dispatch('login', {
-        mail: this.mail,
-        password: this.password,
-        uid: this.$route.query.uid,
+        inputMail: this.inputMail,
+        inputPassword: this.inputPassword,
+        inputUid: this.$route.query.uid,
       });
       if (loginData.errorMessage !== '') {
-        this.messages.push(loginData.errorMessage);
+        this.displayMessages.push(loginData.errorMessage);
       } else {
         if (loginData.tmp_regist) {
-          const uid = loginData.uid;
+          const uid = loginData.inputUid;
           this.$router.push({ name: loginData.pageName, query: { uid } });
         } else {
           this.$router.push('home');
@@ -275,39 +297,39 @@ export default {
       }
     },
     async signup() {
-      this.messages.length = 0;
+      this.displayMessages.length = 0;
       const signupData = await this.$store.dispatch('signup', {
-        uid: this.$route.query.uid,
-        birthYear: this.birthYear,
-        birthMonth: this.birthMonth,
-        birthDay: this.birthDay,
-        sex: this.sex,
-        user_name: this.user_name,
-        interestTags: this.interestTags,
+        inputUid: this.$route.query.uid,
+        inputBirthYear: this.inputBirthYear,
+        inputBirthMonth: this.inputBirthMonth,
+        inputBirthDay: this.inputBirthDay,
+        inputSex: this.inputSex,
+        inputUserName: this.inputUserName,
+        inputInterestTags: this.inputInterestTags,
       });
       if (signupData.errorMessage !== '') {
-        this.messages.push(signupData.errorMessage);
+        this.displayMessages.push(signupData.errorMessage);
       } else {
         await this.$router.push('home');
       }
     },
     async snsSignup(snsType) {
-      this.messages.length = 0;
+      this.displayMessages.length = 0;
       const order = this.changeDisplayData.displayName;
       const snsSignupData = await this.$store.dispatch('snsSignup', {
         snsType,
         order,
       });
       if (snsSignupData.errorMessage !== '') {
-        this.messages.push(snsSignupData.errorMessage);
+        this.displayMessages.push(snsSignupData.errorMessage);
       } else {
-        const uid = snsSignupData.uid;
+        const uid = snsSignupData.inputUid;
         this.$router.push({ name: snsSignupData.pageName, query: { uid } });
       }
     },
     getItemList() {
-      this.interestTags = this.$store.getters.getInterestList;
-      this.interestTags.forEach(async (val) => {
+      this.inputInterestTags = this.$store.getters.getInterestList;
+      this.inputInterestTags.forEach(async (val) => {
         val['flg'] = 'off';
       });
     },
@@ -321,11 +343,11 @@ export default {
           }
         }
       });
-      this.interestUpdateflg = false;
-      this.interestUpdateflg = true;
+      this.interestUpdateFlg = false;
+      this.interestUpdateFlg = true;
     },
     getSelectDays() {
-      this.daysNum = getSelectDay(this.birthYear, this.birthMonth);
+      this.daysNum = getSelectDay(this.inputBirthYear, this.inputBirthMonth);
     },
     movePage() {
       this.$router.push(this.destinationPageCode).catch(() => {

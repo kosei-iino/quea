@@ -1,24 +1,24 @@
-const aswSes = (signupData) => {
+const awsSes = (signupData) => {
     require('dotenv').config();
     let mailData = { errorMessage: '' };
-    const letterBody = "<p>こんにちは、queaへご登録頂き、ありがとうございます。</p><p>下記の内容で仮登録を受け付けております。</p><p>Eメール：" + signupData.mail + "</p><p>本登録を確定するために、<a href='http://localhost:8080/?uid=" + signupData.uid + "'>こちらをクリックして</a>、ユーザー登録を完了してください。</p>";
-    var AWS = require('aws-sdk');
-    AWS.config.update(
+    const letterBody = '<p>こんにちは、queaへご登録頂き、ありがとうございます。</p><p>下記の内容で仮登録を受け付けております。</p><p>Eメール：' + signupData.sendMail + '</p><p>本登録を確定するために、<a href="http://localhost:8080/?uid=' + signupData.inputUid + '">こちらをクリックして</a>、ユーザー登録を完了してください。</p>';
+    let awsApp = require('aws-sdk');
+    awsApp.config.update(
         {
-            credentials: new AWS.Credentials(
+            credentials: new awsApp.Credentials(
                 process.env.VUE_APP_ACCESS_KEY,
                 process.env.VUE_APP_SECRET_ACCESS_KEY
             ),
             region: process.env.VUE_APP_REGION
         }
     );
-    var params = {
+    let params = {
         Destination: {
             CcAddresses: [
                 process.env.VUE_APP_SENDER_EMAIL,
             ],
             ToAddresses: [
-                signupData.mail,
+                signupData.sendMail,
             ]
         },
         Message: {
@@ -38,7 +38,7 @@ const aswSes = (signupData) => {
             process.env.VUE_APP_SENDER_EMAIL,
         ],
     };
-    var sendPromise = new AWS.SES({ apiVersion: '2010-12-01' }).sendEmail(params).promise();
+    let sendPromise = new awsApp.SES({ apiVersion: '2010-12-01' }).sendEmail(params).promise();
     sendPromise.then(() => {
     }).catch(
         () => {
@@ -46,4 +46,4 @@ const aswSes = (signupData) => {
         });
     return mailData
 }
-export default aswSes
+export default awsSes
